@@ -1,6 +1,7 @@
 *.zip
 *.kicad_sym
 secrets.json
+.idea/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
