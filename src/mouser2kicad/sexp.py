@@ -1,6 +1,7 @@
 import re
 from enum import Enum
 from io import IOBase
+from os import PathLike
 from typing import Callable
 
 _EOF = '\x04'
@@ -224,7 +225,7 @@ def read_from_string(character_data: str) -> Node:
     return root_node
 
 
-def read_from_file(fpath: str) -> Node:
+def read_from_file(fpath: PathLike) -> Node:
     with open(fpath, 'rb') as f:
         character_data = f.read().decode(_get_encoding())
     return read_from_string(character_data)

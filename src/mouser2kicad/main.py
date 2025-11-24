@@ -1,6 +1,6 @@
 import argparse
 import pathlib
-from importlib.metadata import version
+from importlib import metadata
 import os
 import re
 import sys
@@ -13,10 +13,8 @@ from colorama import Fore, Style
 
 from mouser2kicad import sexp
 
-from mouser2kicad.sexp import Node
-from mouser2kicad.web import web
-
-VERSION = version('mouser2kicad')
+from mouser2kicad.symbols import process_symbols
+from mouser2kicad.util import err
 
 #320776
 
@@ -33,51 +31,6 @@ VERSION = version('mouser2kicad')
 SYM_PATTERN = re.compile(r'[^/]+/[Kk]i[Cc]ad/([^/]+\.kicad_sym)')
 FPRINT_PATTERN = re.compile(r'[^/]+/[Kk]i[Cc]ad/([^/]+\.kicad_mod)')
 MOD3D_PATTERN = re.compile(r'[^/]+/3[Dd]/([^/]+\.stp)')
-
-def handle_symbol(args: argparse.Namespace, data: bytes):
-    d = sexp.read_from_string(data.decode('utf8'))
-    if not d[0].is_list() or not d[0][0].is_token_lower('kicad_symbol_lib'):
-        raise Exception("Input is not a KiCad Symbol Library.")
-
-    if not os.path.exists(args.target):
-        print(f"Target symbol library '{args.target}' does not exist and will be created.")
-        lib = sexp.read_from_string("(kicad_symbol_lib (version X) (generator X)\r\n)")
-    else:
-        lib = sexp.read_from_file(args.target)
-
-    if not lib[0].is_list() or not lib[0][0].is_token_lower('kicad_symbol_lib'):
-        raise Exception("Target is not a KiCad Symbol Library.")
-
-    syms_in_lib: set[str] = {str(s[1]) for s in lib[0].subnodes if s.is_list() and s[0].is_token_lower('symbol')}
-    syms_to_add: list[Node] = []
-
-    for i in range(0, len(d[0].subnodes)):
-        s = d[0].subnodes[i]
-        if s.is_list() and s[0].is_token_lower('symbol') and str(s[1]) not in syms_in_lib:
-            syms_to_add.append(s)
-            if i + 1 < len(d[0].subnodes) and d[0].subnodes[i + 1].is_whitespace():
-                syms_to_add.append(d[0].subnodes[i + 1])
-            if i - 1 > 0 and d[0].subnodes[i - 1].is_whitespace():
-                syms_to_add.insert(0, d[0].subnodes[i - 1].only_indentation())
-
-    not_to_add = [s for s in d[0].subnodes if s.is_list() and s[0].is_token_lower('symbol') and str(s[1]) in syms_in_lib]
-
-    print(f"Already in lib: {', '.join(syms_in_lib)}")
-    print(f"To add: {', '.join(str(s[1]) for s in syms_to_add if not s.is_whitespace())}")
-    print(f"Not to add: {', '.join(str(s[1]) for s in not_to_add)}")
-
-    version = [s for s in lib[0].subnodes if s.is_list() and s[0].is_token_lower('version')][0]
-    version[1].content = '20200101' #datetime.now().strftime('%Y%m%d')
-
-    generator = [s for s in lib[0].subnodes if s.is_list() and s[0].is_token_lower('generator')][0]
-    generator[1].content = f"mouser2kicad v{VERSION}"
-    generator[1].quoted = True
-
-    for symb in syms_to_add:
-        lib[0].subnodes.append(symb)
-
-    lib.write(open(args.target, 'wb'))
-
 
 def handle_fprint(args: argparse.Namespace, name: str, data: bytes, path3d: Optional[Path]):
     target = Path(args.target).with_suffix(".pretty")
@@ -120,12 +73,6 @@ def handle_3d(args: argparse.Namespace, name: str, data: bytes) -> Path:
     return model_file_path
 
 
-def err(msg: str, recoverable=True):
-    print(f'{Fore.RED}{msg}{Fore.RESET}', file=sys.stderr)
-    if not recoverable:
-        exit(1)
-
-
 def main():
     print(f"{Fore.GREEN}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{Fore.RESET}")
     print(f"{Fore.GREEN}~~ Welcome to m2k 'mouser2kicad' ~~{Fore.RESET}")
@@ -150,7 +97,11 @@ def main():
         exit(0)
 
     print(f"{Style.BRIGHT}Reading zip archives...{Style.NORMAL}")
-    zip_contents = {}
+
+    symbols: dict[str, bytes] = {}
+    fprints: dict[str, bytes] = {}
+    models: dict[str, bytes] = {}
+
 
     for i in range(0, len(args.ZIP)):
         zpath = args.ZIP[i]
@@ -165,22 +116,36 @@ def main():
         else:
             try:
                 with ZipFile(zpath) as z:
-                    symbols = {n.group(1): z.open(n.group(0), 'r').read() for n in [SYM_PATTERN.match(n) for n in z.namelist()] if n}
-                    fprints = {n.group(1): z.open(n.group(0), 'r').read() for n in [FPRINT_PATTERN.match(n) for n in z.namelist()] if n}
-                    models = {n.group(1): z.open(n.group(0), 'r').read() for n in [MOD3D_PATTERN.match(n) for n in z.namelist()] if n}
+                    new_symbols = {n.group(1): z.open(n.group(0), 'r').read() for n in [SYM_PATTERN.match(n) for n in z.namelist()] if n}
+                    new_fprints = {n.group(1): z.open(n.group(0), 'r').read() for n in [FPRINT_PATTERN.match(n) for n in z.namelist()] if n}
+                    new_models = {n.group(1): z.open(n.group(0), 'r').read() for n in [MOD3D_PATTERN.match(n) for n in z.namelist()] if n}
 
-                    subelements = [f"[ Symbol    ] {x}" for x in symbols.keys()] + \
-                                  [f"[ Footprint ] {x}" for x in fprints.keys()] + \
-                                  [f"[ 3D Model  ] {x}" for x in models.keys()]
+                    skipped = Fore.RED + " (Ignored, already found in another zip file)" + Fore.RESET
+                    w = min(40, max([len(k) for k in new_symbols.keys()] + [len(k) for k in new_fprints.keys()] + [len(k) for k in new_models.keys()]))
+
+                    subelements = [f"[ Symbol    ] {x:<{w}} {skipped if x in symbols else ""}" for x in new_symbols.keys()] + \
+                                  [f"[ Footprint ] {x:<{w}} {skipped if x in fprints else ""}" for x in new_fprints.keys()] + \
+                                  [f"[ 3D Model  ] {x:<{w}} {skipped if x in models else ""}" for x in new_models.keys()]
 
                     for j in range(0, len(subelements)):
                         l3char = " ├──" if j < len(subelements) - 1 else " └──"
                         print(f"{l2char}   {l3char} {Fore.BLUE}{subelements[j]}{Fore.RESET}")
 
-                    zip_contents[zpath] = (symbols, fprints, models)
-            except:
-                print(f"{l2char}    └── {Fore.RED}Error opening file.{Fore.RESET}")
+                    for s in new_symbols.keys():
+                        if s not in symbols:
+                            symbols[s] = new_symbols[s]
 
+                    for f in new_fprints.keys():
+                        if f not in fprints:
+                            fprints[f] = new_fprints[f]
+
+                    for m in new_models.keys():
+                        if m not in models:
+                            models[m] = new_models[m]
+            except Exception as e:
+                print(f"{l2char}    └── {Fore.RED}Error opening file: {e}.{Fore.RESET}")
+
+    process_symbols(args.target, symbols)
 
     return
 
