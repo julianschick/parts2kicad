@@ -6,7 +6,7 @@ requires-python = ">=3.10"
 dependencies = [
     "importlib>=1.0.4",
     "requests>=2.32.5",
-    "uv-build>=0.9.11",
+    "uv-build>=0.9.13",
     "colorama>=0.4.6",
     "selenium>=4.38.0"
 ]
@@ -17,7 +17,7 @@ dev = [
 ]
 
 [build-system]
-requires = ["uv-build>=0.9.11"]
+requires = ["uv-build>=0.9.13"]
 build-backend = "uv_build"
 
 [project.scripts]

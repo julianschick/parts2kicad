@@ -8,9 +8,15 @@ from mouser2kicad.sexp import Node, Whitespace
 
 PRE: Final[str] =  "    * "
 PRE2: Final[str] = "        └── "
+INITIAL_SEXP: Final[str] = f'(kicad_symbol_lib (version 20200101) (generator "mouser2kicad v{VERSION}")\r\n)'
+
 
 def is_symbol(node: Node, sname: Optional[str] = None) -> bool:
-    return node.is_list() and len(node) > 1 and node[0].is_token_lower('symbol') and (sname is None or str(node[1]) == sname)
+    # noinspection PyTypeChecker
+    return node.is_list() \
+        and len(node) > 1 \
+        and node[0].is_token_lower('symbol') \
+        and (sname is None or str(node[1]) == sname)
 
 
 def process_symbols(target: Path, symbols: dict[str, bytes]):
@@ -20,7 +26,7 @@ def process_symbols(target: Path, symbols: dict[str, bytes]):
     else:
         if not os.path.exists(target):
             print(f"{PRE}Target symbol library '{target}' does not exist and will be created.")
-            lib = sexp.read_from_string(f'(kicad_symbol_lib (version 20200101) (generator "mouser2kicad v{VERSION}")\r\n)')
+            lib = sexp.read_from_string(INITIAL_SEXP)
         else:
             lib = sexp.read_from_file(target)
 
@@ -59,7 +65,9 @@ def process_symbols(target: Path, symbols: dict[str, bytes]):
                 overwrite = False
 
                 if clash:
-                    user_input = input(f"{PRE}{symbol_name} already in lib, what to do? skip (default) / overwrite / cancel ")
+                    user_input = input(
+                        f"{PRE}{symbol_name} already in lib, what to do? skip (default) / overwrite / cancel "
+                    )
 
                     if user_input == "o" or user_input == "overwrite":
                         overwrite = True
