@@ -12,6 +12,8 @@ import colorama
 from colorama import Fore, Style
 
 from mouser2kicad import sexp
+from mouser2kicad.fprints import process_fprints
+from mouser2kicad.models import process_3dmodels
 
 from mouser2kicad.symbols import process_symbols
 from mouser2kicad.util import err
@@ -121,11 +123,14 @@ def main():
                     new_models = {n.group(1): z.open(n.group(0), 'r').read() for n in [MOD3D_PATTERN.match(n) for n in z.namelist()] if n}
 
                     skipped = Fore.RED + " (Ignored, already found in another zip file)" + Fore.RESET
-                    w = min(40, max([len(k) for k in new_symbols.keys()] + [len(k) for k in new_fprints.keys()] + [len(k) for k in new_models.keys()]))
+                    if new_symbols:
+                        w = min(40, max([len(k) for k in new_symbols.keys()] + [len(k) for k in new_fprints.keys()] + [len(k) for k in new_models.keys()]))
+                    else:
+                        w = 40
 
-                    subelements = [f"[ Symbol    ] {x:<{w}} {skipped if x in symbols else ""}" for x in new_symbols.keys()] + \
-                                  [f"[ Footprint ] {x:<{w}} {skipped if x in fprints else ""}" for x in new_fprints.keys()] + \
-                                  [f"[ 3D Model  ] {x:<{w}} {skipped if x in models else ""}" for x in new_models.keys()]
+                    subelements = [f"[ 🪧 Symbol    ] {x:<{w}} {skipped if x in symbols else ""}" for x in new_symbols.keys()] + \
+                                  [f"[ 👣 Footprint ] {x:<{w}} {skipped if x in fprints else ""}" for x in new_fprints.keys()] + \
+                                  [f"[ 📦 3D Model  ] {x:<{w}} {skipped if x in models else ""}" for x in new_models.keys()]
 
                     for j in range(0, len(subelements)):
                         l3char = " ├──" if j < len(subelements) - 1 else " └──"
@@ -146,8 +151,11 @@ def main():
                 print(f"{l2char}    └── {Fore.RED}Error opening file: {e}.{Fore.RESET}")
 
     process_symbols(args.target, symbols)
+    process_3dmodels(args.target, models)
+    process_fprints(args.target, fprints)
 
-    return
+    print("")
+    exit(0)
 
     print(colorama.Fore.GREEN + "Hello" + colorama.Fore.RESET)
 

@@ -6,15 +6,15 @@ from mouser2kicad import sexp, VERSION
 from mouser2kicad.util import err
 from mouser2kicad.sexp import Node, Whitespace
 
-PRE: Final[str] =  "  * "
-PRE2: Final[str] = "      └── "
+PRE: Final[str] =  "    * "
+PRE2: Final[str] = "        └── "
 
 def is_symbol(node: Node, sname: Optional[str] = None) -> bool:
     return node.is_list() and len(node) > 1 and node[0].is_token_lower('symbol') and (sname is None or str(node[1]) == sname)
 
 
 def process_symbols(target: Path, symbols: dict[str, bytes]):
-    print("\nSymbols...")
+    print("\n 🪧 Symbols ...")
     if not symbols:
         print(f"{PRE}No symbols to process.")
     else:
@@ -68,18 +68,22 @@ def process_symbols(target: Path, symbols: dict[str, bytes]):
                         exit(0)
                     if not overwrite:
                         print(f"{PRE2}[ Skipped ]")
+                else:
+                    print(f"{PRE}{symbol_name}")
 
                 if clash and overwrite:
-                    lib[0].subnodes[:] = [x for x in lib[0].subnodes if not is_symbol(x, sname=symbol_name)]
+                    index = next((i for i, x in enumerate(lib[0].subnodes) if is_symbol(x, sname=symbol_name)))
+                    lib[0].subnodes[index] = sym
+                    print(f"{PRE2} [ Overwritten ]")
 
-                if not clash or clash and overwrite:
-                    if ws_before and not clash:
+                if not clash:
+                    if ws_before:
                         lib[0].subnodes.append(ws_before)
                     lib[0].subnodes.append(sym)
-                    if ws_after and not clash:
+                    if ws_after:
                         lib[0].subnodes.append(ws_after)
 
-                    print(f"{PRE2} [ {"Overwritten" if clash else "Inserted"} ]")
+                    print(f"{PRE2} [ Inserted ]")
 
 
         lib.write(open(target, 'wb'))
