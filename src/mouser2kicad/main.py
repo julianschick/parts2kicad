@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import os
 import pathlib
 import re
@@ -10,6 +11,7 @@ from colorama import Fore, Style
 
 from mouser2kicad import sexp
 from mouser2kicad.fprints import process_fprints
+from mouser2kicad.term import MAIN_L1_MID, MAIN_L2_MID, MAIN_L1_END, MAIN_L2_END
 from mouser2kicad.models import process_3dmodels
 from mouser2kicad.symbols import process_symbols
 from mouser2kicad.util import err
@@ -70,7 +72,7 @@ def handle_3d(args: argparse.Namespace, name: str, data: bytes) -> Path:
     return model_file_path
 
 
-def main():
+def main__():
     print(f"{Fore.GREEN}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{Fore.RESET}")
     print(f"{Fore.GREEN}~~ Welcome to m2k 'mouser2kicad' ~~{Fore.RESET}")
     print(f"{Fore.GREEN}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{Fore.RESET}", flush=True)
@@ -97,23 +99,30 @@ def main():
 
     print(f"{Style.BRIGHT}Reading zip archives...{Style.NORMAL}")
 
-    symbols: dict[str, bytes] = {}
-    fprints: dict[str, bytes] = {}
-    models: dict[str, bytes] = {}
-
+    symbols: dict[tuple[str, str], bytes] = {}
+    fprints: dict[tuple[str, str], bytes] = {}
+    models: dict[tuple[str, str], bytes] = {}
+    zip_hashes: set[str] = set()
 
     for i in range(0, len(args.ZIP)):
         zpath = args.ZIP[i]
-        l1char = " ├──" if i < len(args.ZIP) - 1 else " └──"
-        l2char = " │  " if i < len(args.ZIP) - 1 else "    "
+        l1char = MAIN_L1_MID if i < len(args.ZIP) - 1 else MAIN_L1_END
+        l2char = MAIN_L2_MID if i < len(args.ZIP) - 1 else MAIN_L2_END
+        l3char_single = "    └── "
         print(f"{l1char} {Fore.MAGENTA}{zpath}{Fore.RESET}")
 
         if not os.path.exists(zpath) or not os.path.isfile(zpath):
-            print(f"{l2char}    └── {Fore.RED}Not found in filesystem.{Fore.RESET}")
+            print(f"{l2char}{l3char_single}{Fore.RED}Not found in filesystem.{Fore.RESET}")
         elif not os.access(zpath, os.R_OK):
-            print(f"{l2char}    └── {Fore.RED}Not readable.{Fore.RESET}")
+            print(f"{l2char}{l3char_single}{Fore.RED}Not readable.{Fore.RESET}")
         else:
             try:
+                zip_hash = hashlib.md5(open(zpath, 'rb').read()).hexdigest()
+                if zip_hash in zip_hashes:
+                    print(
+                        f"{l2char}{l3char_single}{Fore.RED}Archive with same hash already in the input list, skipped.{Fore.RESET}")
+                zip_hashes.add(zip_hash)
+
                 with ZipFile(zpath) as z:
                     new_symbols = {n.group(1): z.open(n.group(0), 'r').read() for n in
                                    [SYM_PATTERN.match(n) for n in z.namelist()] if n}
@@ -143,17 +152,20 @@ def main():
 
                     for s in new_symbols.keys():
                         if s not in symbols:
-                            symbols[s] = new_symbols[s]
+                            symbols[(zip_hash, m)] = new_symbols[s]
 
                     for f in new_fprints.keys():
                         if f not in fprints:
-                            fprints[f] = new_fprints[f]
+                            fprints[(zip_hash, m)] = new_fprints[f]
 
                     for m in new_models.keys():
                         if m not in models:
-                            models[m] = new_models[m]
+                            models[(zip_hash, m)] = new_models[m]
+
+                    if not subelements:
+                        print(f"{l2char}{l3char_single}{Fore.BLUE}No electronic circuitry found here{Fore.RESET}")
             except Exception as e:
-                print(f"{l2char}    └── {Fore.RED}Error opening file: {e}.{Fore.RESET}")
+                print(f"{l2char}{l3char_single}{Fore.RED}Error opening file: {e}.{Fore.RESET}")
 
     process_symbols(args.target, symbols)
     paths_to_models = process_3dmodels(args.target, models)
@@ -163,5 +175,9 @@ def main():
     exit(0)
 
 
-if __name__ == "__main__":
-    main()
+def main():
+    try:
+        main__()
+    except KeyboardInterrupt as intr:
+        print(f"\n\n {Fore.RED}>> Cmd+C, bye. <<{Fore.RESET}\n")
+        exit(130)

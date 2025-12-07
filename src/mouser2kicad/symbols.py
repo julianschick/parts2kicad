@@ -3,11 +3,10 @@ from pathlib import Path
 from typing import Final, Optional
 
 from mouser2kicad import sexp, VERSION
+from mouser2kicad.term import PRE, PRE2, clash_input, ClashHandling
 from mouser2kicad.util import err
 from mouser2kicad.sexp import Node, Whitespace
 
-PRE: Final[str] =  "    * "
-PRE2: Final[str] = "        └── "
 INITIAL_SEXP: Final[str] = f'(kicad_symbol_lib (version 20200101) (generator "mouser2kicad v{VERSION}")\r\n)'
 
 
@@ -19,7 +18,7 @@ def is_symbol(node: Node, sname: Optional[str] = None) -> bool:
         and (sname is None or str(node[1]) == sname)
 
 
-def process_symbols(target: Path, symbols: dict[str, bytes]):
+def process_symbols(target: Path, symbols: dict[tuple[str, str], bytes]):
     print("\n 🪧 Symbols ...")
     if not symbols:
         print(f"{PRE}No symbols to process.")
@@ -36,7 +35,7 @@ def process_symbols(target: Path, symbols: dict[str, bytes]):
 
         syms_in_lib: set[str] = {str(s[1]) for s in lib[0].subnodes if is_symbol(s)}
 
-        for (sym_fname, sym_data) in symbols.items():
+        for (sym_ziphash, sym_fname), sym_data in symbols.items():
             d = sexp.read_from_string(sym_data.decode('utf8'))
             if not d[0].is_list() or not d[0][0].is_token_lower('kicad_symbol_lib'):
                 raise Exception("Input is not a KiCad Symbol Library.")
@@ -65,17 +64,10 @@ def process_symbols(target: Path, symbols: dict[str, bytes]):
                 overwrite = False
 
                 if clash:
-                    user_input = input(
-                        f"{PRE}{symbol_name} already in lib, what to do? skip (default) / overwrite / cancel "
-                    )
+                    clash_handling = clash_input(f"{PRE}{symbol_name} already in lib, what to do?")
+                    if clash_handling == ClashHandling.CANCEL:
+                        exit(1)
 
-                    if user_input == "o" or user_input == "overwrite":
-                        overwrite = True
-                    elif user_input == "c" or user_input == "cancel":
-                        print(f"{PRE2}[ Cancelled ]")
-                        exit(0)
-                    if not overwrite:
-                        print(f"{PRE2}[ Skipped ]")
                 else:
                     print(f"{PRE}{symbol_name}")
 
@@ -92,6 +84,5 @@ def process_symbols(target: Path, symbols: dict[str, bytes]):
                         lib[0].subnodes.append(ws_after)
 
                     print(f"{PRE2} [ Inserted ]")
-
 
         lib.write(open(target, 'wb'))
