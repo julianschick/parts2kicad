@@ -16,20 +16,8 @@ from mouser2kicad.models import process_3dmodels
 from mouser2kicad.symbols import process_symbols
 from mouser2kicad.util import err
 
-#320776
-
-# r = requests.get(
-#     "https://ms.componentsearchengine.com/ga/model.php?fmt3d=stp&partID=423264",
-#     auth=(user, pass)
-# )
-#
-# if r.status_code == 200:
-#     data = BytesIO(r.content).read()
-#     with open('test.zip', 'wb') as f:
-#         f.write(data)
-
-SYM_PATTERN = re.compile(r'[^/]+/[Kk]i[Cc]ad/([^/]+\.kicad_sym)')
-FPRINT_PATTERN = re.compile(r'[^/]+/[Kk]i[Cc]ad/([^/]+\.kicad_mod)')
+SYM_PATTERN = re.compile(r'[^/]+/[Kk][Ii][Cc][Aa][Dd]/([^/]+\.kicad_sym)')
+FPRINT_PATTERN = re.compile(r'[^/]+/[Kk][Ii][Cc][Aa][Dd]/([^/]+\.kicad_mod)')
 MOD3D_PATTERN = re.compile(r'[^/]+/3[Dd]/([^/]+\.stp)')
 
 def handle_fprint(args: argparse.Namespace, name: str, data: bytes, path3d: Optional[Path]):
@@ -87,6 +75,10 @@ def main__():
         help="Path to the target *.kicad_sym library. If the library is foo.kicad_sym, "
              "the footprints go to the folder foo.pretty and the 3D models to the folder foo.3dshapes."
     )
+    parser.add_argument('-ss', '--skip-all', action="store_true",
+                        help="Skip all elements already in the target library.")
+    parser.add_argument('-oo', '--overwrite-all', action="store_true",
+                        help="Overwrite all elements already in the target library.")
     parser.add_argument('ZIP', nargs='*', type=pathlib.Path, help="Zip files to read.")
     args = parser.parse_args()
 
@@ -151,15 +143,15 @@ def main__():
                         print(f"{l2char}   {l3char} {Fore.BLUE}{subelements[j]}{Fore.RESET}")
 
                     for s in new_symbols.keys():
-                        if s not in symbols:
-                            symbols[(zip_hash, m)] = new_symbols[s]
+                        if not any([s_ == s for _, s_ in symbols.keys()]):
+                            symbols[(zip_hash, s)] = new_symbols[s]
 
                     for f in new_fprints.keys():
-                        if f not in fprints:
-                            fprints[(zip_hash, m)] = new_fprints[f]
+                        if not any([f_ == f for _, f_ in fprints.keys()]):
+                            fprints[(zip_hash, f)] = new_fprints[f]
 
                     for m in new_models.keys():
-                        if m not in models:
+                        if not any([m_ == m for _, m_ in models.keys()]):
                             models[(zip_hash, m)] = new_models[m]
 
                     if not subelements:
@@ -167,9 +159,9 @@ def main__():
             except Exception as e:
                 print(f"{l2char}{l3char_single}{Fore.RED}Error opening file: {e}.{Fore.RESET}")
 
-    process_symbols(args.target, symbols)
-    paths_to_models = process_3dmodels(args.target, models)
-    process_fprints(args.target, fprints, paths_to_models)
+    process_symbols(args, args.target, symbols)
+    paths_to_models = process_3dmodels(args, args.target, models)
+    process_fprints(args, args.target, fprints, paths_to_models)
 
     print("")
     exit(0)
@@ -178,6 +170,6 @@ def main__():
 def main():
     try:
         main__()
-    except KeyboardInterrupt as intr:
+    except KeyboardInterrupt:
         print(f"\n\n {Fore.RED}>> Cmd+C, bye. <<{Fore.RESET}\n")
         exit(130)

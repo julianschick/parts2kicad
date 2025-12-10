@@ -1,33 +1,47 @@
 import os.path
 import shutil
+from argparse import Namespace
 from pathlib import Path
+
+from colorama import Fore
 
 from mouser2kicad.term import PRE, clash_input, ClashHandling, PRE2
 
 
-def process_3dmodels(target: Path, symbols: dict[tuple[str, str], bytes]):
+def process_3dmodels(args: Namespace, target: Path, models: dict[tuple[str, str], bytes]) -> dict[str, dict[str, Path]]:
     target_models = target.with_suffix(".3dshapes")
-    print(target_models)
-    print(symbols.keys())
+    if not os.path.exists(target_models):
+        os.mkdir(target_models)
+
+    result = {}
 
     print("\n 📦 3D Models ...")
+    if not models:
+        print(f"{PRE}No models to process.")
+    else:
+        for (zip_hash, name), data in models.items():
+            target_file = target_models / name
 
-    for (zip_hash, name), data in symbols.items():
-        target_file = target_models / name
-
-        clash_handling = None
-        if os.path.exists(target_file):
-            clash_handling = clash_input(f"{PRE}{name} already exists, what to do?")
-            if clash_handling == ClashHandling.CANCEL:
-                exit(1)
-
-        if not os.path.exists(target_file) or clash_handling == ClashHandling.OVERWRITE:
-            open(target_file, 'wb').write(data)
-
-            if clash_handling:
-                print(f"{PRE2} [ Overwritten ]")
+            clash_handling = None
+            if os.path.exists(target_file):
+                clash_handling = clash_input(args, f"{PRE}{Fore.MAGENTA}{name} already exists, what to do?{Fore.RESET}")
+                if clash_handling == ClashHandling.CANCEL:
+                    exit(1)
             else:
-                print(f"{PRE2} [ Written ]")
+                print(f"{PRE}{Fore.MAGENTA}{name}{Fore.RESET}")
+
+            if not os.path.exists(target_file) or clash_handling == ClashHandling.OVERWRITE:
+                open(target_file, 'w+b').write(data)
+                if zip_hash not in result:
+                    result[zip_hash] = {}
+                result[zip_hash][name] = target_file
+
+                if clash_handling:
+                    print(f"{PRE2}[ Overwritten ]")
+                else:
+                    print(f"{PRE2}[ Written ]")
+
+    return result
 
 
 

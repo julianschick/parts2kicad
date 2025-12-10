@@ -1,6 +1,9 @@
 import os
+from argparse import Namespace
 from pathlib import Path
 from typing import Final, Optional
+
+from colorama import Fore
 
 from mouser2kicad import sexp, VERSION
 from mouser2kicad.term import PRE, PRE2, clash_input, ClashHandling
@@ -18,7 +21,7 @@ def is_symbol(node: Node, sname: Optional[str] = None) -> bool:
         and (sname is None or str(node[1]) == sname)
 
 
-def process_symbols(target: Path, symbols: dict[tuple[str, str], bytes]):
+def process_symbols(args: Namespace, target: Path, symbols: dict[tuple[str, str], bytes]):
     print("\n 🪧 Symbols ...")
     if not symbols:
         print(f"{PRE}No symbols to process.")
@@ -60,29 +63,27 @@ def process_symbols(target: Path, symbols: dict[tuple[str, str], bytes]):
             for ws_before, sym, ws_after in syms_to_add:
                 symbol_name = str(sym[1])
 
-                clash = symbol_name in syms_in_lib
-                overwrite = False
+                clash_handling = None
 
-                if clash:
-                    clash_handling = clash_input(f"{PRE}{symbol_name} already in lib, what to do?")
+                if symbol_name in syms_in_lib:
+                    clash_handling = clash_input(args, f"{PRE}{Fore.MAGENTA}{symbol_name} already in lib, what to do?{Fore.RESET}")
                     if clash_handling == ClashHandling.CANCEL:
                         exit(1)
-
                 else:
-                    print(f"{PRE}{symbol_name}")
+                    print(f"{PRE}{Fore.MAGENTA}{symbol_name}{Fore.RESET}")
 
-                if clash and overwrite:
+                if clash_handling == ClashHandling.OVERWRITE:
                     index = next((i for i, x in enumerate(lib[0].subnodes) if is_symbol(x, sname=symbol_name)))
                     lib[0].subnodes[index] = sym
-                    print(f"{PRE2} [ Overwritten ]")
+                    print(f"{PRE2}[ Overwritten ]")
 
-                if not clash:
+                if not clash_handling:
                     if ws_before:
                         lib[0].subnodes.append(ws_before)
                     lib[0].subnodes.append(sym)
                     if ws_after:
                         lib[0].subnodes.append(ws_after)
 
-                    print(f"{PRE2} [ Inserted ]")
+                    print(f"{PRE2}[ Inserted ]")
 
         lib.write(open(target, 'wb'))

@@ -1,3 +1,4 @@
+from argparse import Namespace
 from enum import Enum
 from typing import Final
 
@@ -15,9 +16,17 @@ class ClashHandling(Enum):
     CANCEL = 2
 
 
-def clash_input(question: str) -> ClashHandling:
+def clash_input(args: Namespace, question: str) -> ClashHandling:
+    if args.overwrite_all:
+        print(f"{question} (s)kip (default) / (o)verwrite / (c)ancel > overwrite")
+        return ClashHandling.OVERWRITE
+    if args.skip_all:
+        print(f"{question} (s)kip (default) / (o)verwrite / (c)ancel > skip")
+        print(f"{PRE2}[ Skipped ]")
+        return ClashHandling.SKIP
+
     user_input = input(
-        f"{question}? (s)kip (default) / (o)verwrite / (c)ancel > "
+        f"{question} (s)kip (default) / (o)verwrite / (c)ancel > "
     )
 
     if user_input == "o" or user_input == "overwrite":
