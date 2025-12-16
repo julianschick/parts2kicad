@@ -5,8 +5,8 @@ from typing import Optional
 
 from colorama import Fore
 
-from mouser2kicad import sexp
-from mouser2kicad.term import clash_input, PRE, ClashHandling, PRE2
+from parts2kicad import sexp
+from parts2kicad.term import clash_input, PRE, ClashHandling, PRE2
 
 
 def process_fprints(args: Namespace, target: Path, fprints: dict[tuple[str, str], bytes], paths_to_models: dict[str, dict[str, Path]]):

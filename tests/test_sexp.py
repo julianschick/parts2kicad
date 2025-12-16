@@ -1,4 +1,4 @@
-from mouser2kicad import sexp
+from parts2kicad import sexp
 
 testdata = """(kicad_symbol_lib (version 20220914) (generator SamacSys_ECAD_Model)
   (symbol "NE555DR" (in_bom yes) (on_board yes)

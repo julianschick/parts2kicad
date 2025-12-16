@@ -5,7 +5,7 @@ from pathlib import Path
 
 from colorama import Fore
 
-from mouser2kicad.term import PRE, clash_input, ClashHandling, PRE2
+from parts2kicad.term import PRE, clash_input, ClashHandling, PRE2
 
 
 def process_3dmodels(args: Namespace, target: Path, models: dict[tuple[str, str], bytes]) -> dict[str, dict[str, Path]]:

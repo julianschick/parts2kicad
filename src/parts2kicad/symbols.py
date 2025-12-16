@@ -5,12 +5,12 @@ from typing import Final, Optional
 
 from colorama import Fore
 
-from mouser2kicad import sexp, VERSION
-from mouser2kicad.term import PRE, PRE2, clash_input, ClashHandling
-from mouser2kicad.util import err
-from mouser2kicad.sexp import Node, Whitespace
+from parts2kicad import sexp, VERSION
+from parts2kicad.term import PRE, PRE2, clash_input, ClashHandling
+from parts2kicad.util import err
+from parts2kicad.sexp import Node, Whitespace
 
-INITIAL_SEXP: Final[str] = f'(kicad_symbol_lib (version 20200101) (generator "mouser2kicad v{VERSION}")\r\n)'
+INITIAL_SEXP: Final[str] = f'(kicad_symbol_lib (version 20200101) (generator "parts2kicad v{VERSION}")\r\n)'
 
 
 def is_symbol(node: Node, sname: Optional[str] = None) -> bool:

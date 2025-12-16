@@ -9,12 +9,12 @@ from zipfile import ZipFile
 
 from colorama import Fore, Style
 
-from mouser2kicad import sexp
-from mouser2kicad.fprints import process_fprints
-from mouser2kicad.term import MAIN_L1_MID, MAIN_L2_MID, MAIN_L1_END, MAIN_L2_END
-from mouser2kicad.models import process_3dmodels
-from mouser2kicad.symbols import process_symbols
-from mouser2kicad.util import err
+from parts2kicad import sexp
+from parts2kicad.fprints import process_fprints
+from parts2kicad.term import MAIN_L1_MID, MAIN_L2_MID, MAIN_L1_END, MAIN_L2_END
+from parts2kicad.models import process_3dmodels
+from parts2kicad.symbols import process_symbols
+from parts2kicad.util import err
 
 SYM_PATTERN = re.compile(r'[^/]+/[Kk][Ii][Cc][Aa][Dd]/([^/]+\.kicad_sym)')
 FPRINT_PATTERN = re.compile(r'[^/]+/[Kk][Ii][Cc][Aa][Dd]/([^/]+\.kicad_mod)')
@@ -62,11 +62,11 @@ def handle_3d(args: argparse.Namespace, name: str, data: bytes) -> Path:
 
 def main__():
     print(f"{Fore.GREEN}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{Fore.RESET}")
-    print(f"{Fore.GREEN}~~ Welcome to m2k 'mouser2kicad' ~~{Fore.RESET}")
+    print(f"{Fore.GREEN}~~ Welcome to p2k 'parts2kicad' ~~{Fore.RESET}")
     print(f"{Fore.GREEN}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{Fore.RESET}", flush=True)
 
     parser = argparse.ArgumentParser(
-        prog="m2k",
+        prog="p2k",
         description="Extract symbols, footprints and 3D models from a zip file and "
                     "integrate them into the respective KiCad libraries."
     )

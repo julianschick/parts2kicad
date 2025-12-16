@@ -1,7 +1,7 @@
 [project]
-name = "mouser2kicad"
+name = "parts2kicad"
 version = "0.1.0"
-description = "Add your description here"
+description = "Integrate (add) symbols, footprints and 3D models from a SamacSys Partlib zip archive (as downloaded for instance from Mouser or Farnell) into local KiCad libraries quickly and without additional steps"
 requires-python = ">=3.10"
 dependencies = [
     "importlib>=1.0.4",
@@ -21,7 +21,8 @@ requires = ["uv-build>=0.9.13"]
 build-backend = "uv_build"
 
 [project.scripts]
-m2k = "mouser2kicad.main:main"
+p2k = "parts2kicad.main:main"
+parts2kicad = "parts2kicad.main:main"
 
 
 
