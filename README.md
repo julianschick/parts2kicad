@@ -31,6 +31,10 @@ Thus, you can move your lib freely around your hard drive. Only if you rename it
 
 The script is mainly intended for non Windows users (the official downloading tool only runs on Windows) and those who prefer command line over graphical UI.
 
+## Installation
+
+So far via PyPi: `pip install parts2kicad`.
+
 ## Usage
 
 Usage is as easy as typing 
@@ -46,3 +50,16 @@ $ p2k ~/downloads/*.zip -t mylibrary.kicad_sym
 
 ![Example Command](images/example.png)
 ![Help Message](images/help.png)
+
+## Project Pages
+
+* [GitHub](https://github.com/julianschick/parts2kicad)
+* [PyPi](https://pypi.org/project/parts2kicad/)
+
+## Technical Background
+
+All in all the main ingredient is a whitespace aware S-Expression parser. It is needed
+for adding Symbols to the `.kicad_sym` library files without destroying the format.
+The format is normally (and also by KiCad specification) nicely indented, so
+that manual editing is also possible. Footprints and 3D models are luckily
+managed on file level.

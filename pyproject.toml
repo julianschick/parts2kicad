@@ -3,10 +3,14 @@ name = "parts2kicad"
 version = "0.1.2"
 description = "Integrate (add) symbols, footprints and 3D models from a SamacSys Partlib zip archive (as downloaded for instance from Mouser or Farnell) into local KiCad libraries quickly and without additional steps"
 url="https://github.com/julianschick/parts2kicad"
+authors = [ {name = "Julian Schick"} ]
+readme = "README.md"
+license = "MIT"
+license-files = [ "LICENSE" ]
 requires-python = ">=3.8"
 dependencies = [
     "importlib>=1.0.4",
-    "uv-build>=0.9.13",
+    "uv-build>=0.9.18",
     "colorama>=0.4.6",
 ]
 
@@ -16,7 +20,7 @@ dev = [
 ]
 
 [build-system]
-requires = ["uv-build>=0.9.13"]
+requires = ["uv-build>=0.9.18"]
 build-backend = "uv_build"
 
 [project.scripts]
