@@ -1,4 +1,5 @@
 import re
+import typing
 from enum import Enum
 from io import IOBase
 from os import PathLike
@@ -88,7 +89,7 @@ class Whitespace(Node):
 
 
 class List(Node):
-    def __init__(self, level: int, subnodes: list[Node]):
+    def __init__(self, level: int, subnodes: typing.List[Node]):
         super().__init__(level)
         self.subnodes = subnodes
         self.subnodes_without_whitespace = [x for x in subnodes if not x.is_whitespace()]
@@ -117,7 +118,7 @@ class List(Node):
 
     def write_string(self) -> str:
         if self.level > 0:
-            return f'({''.join(s.write_string() for s in self.subnodes)})'
+            return f"({''.join(s.write_string() for s in self.subnodes)})"
         else:
             return ''.join(s.write_string() for s in self.subnodes)
 
@@ -138,7 +139,7 @@ class ParserState(Enum):
     IN_WHITESPACE = 4
 
 
-def _recursive_parse(i, d, lvl) -> tuple[int, Node]:
+def _recursive_parse(i, d, lvl) -> typing.Tuple[int, Node]:
     i += 1
     state: ParserState = ParserState.NEXT_TOKEN
     token, ws = "", ""

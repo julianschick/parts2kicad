@@ -3,13 +3,11 @@ import hashlib
 import os
 import pathlib
 import re
-from pathlib import Path
-from typing import Optional
+from typing import Set, Tuple, Dict
 from zipfile import ZipFile
 
 from colorama import Fore, Style
 
-from parts2kicad import sexp
 from parts2kicad.fprints import process_fprints
 from parts2kicad.term import MAIN_L1_MID, MAIN_L2_MID, MAIN_L1_END, MAIN_L2_END
 from parts2kicad.models import process_3dmodels
@@ -19,45 +17,6 @@ from parts2kicad.util import err
 SYM_PATTERN = re.compile(r'[^/]+/[Kk][Ii][Cc][Aa][Dd]/([^/]+\.kicad_sym)')
 FPRINT_PATTERN = re.compile(r'[^/]+/[Kk][Ii][Cc][Aa][Dd]/([^/]+\.kicad_mod)')
 MOD3D_PATTERN = re.compile(r'[^/]+/3[Dd]/([^/]+\.stp)')
-
-def handle_fprint(args: argparse.Namespace, name: str, data: bytes, path3d: Optional[Path]):
-    target = Path(args.target).with_suffix(".pretty")
-
-    if not os.path.exists(target):
-        os.mkdir(target)
-    if os.path.exists(target) and not os.path.isdir(target):
-        raise Exception(f"'{target}' is expected to be a directory.")
-
-    if path3d:
-        rel_path3d = path3d.relative_to(target, walk_up=True)
-
-        s = sexp.read_from_string(data.decode('utf8'))
-        if not s[0].is_list() or not s[0][0].is_token_lower('module'):
-            raise Exception("Not a KiCad Footprint model")
-
-        model = [x for x in s[0] if x.is_list() and x[0].is_token_lower('model')]
-        for m in model:
-            m[1].content = str(rel_path3d)
-            m[1].quoted = True
-
-        data = s.write_string().encode('utf8')
-
-
-    fprint_file_path = target / name
-    open(fprint_file_path, 'wb').write(data)
-
-
-def handle_3d(args: argparse.Namespace, name: str, data: bytes) -> Path:
-    target = Path(args.target).with_suffix(".3dshapes")
-
-    if not os.path.exists(target):
-        os.mkdir(target)
-    if os.path.exists(target) and not os.path.isdir(target):
-        raise Exception(f"'{target}' is expected to be a directory.")
-
-    model_file_path = target / name
-    open(model_file_path, 'wb').write(data)
-    return model_file_path
 
 
 def main__():
@@ -91,10 +50,10 @@ def main__():
 
     print(f"{Style.BRIGHT}Reading zip archives...{Style.NORMAL}")
 
-    symbols: dict[tuple[str, str], bytes] = {}
-    fprints: dict[tuple[str, str], bytes] = {}
-    models: dict[tuple[str, str], bytes] = {}
-    zip_hashes: set[str] = set()
+    symbols: Dict[Tuple[str, str], bytes] = {}
+    fprints: Dict[Tuple[str, str], bytes] = {}
+    models: Dict[Tuple[str, str], bytes] = {}
+    zip_hashes: Set[str] = set()
 
     for i in range(0, len(args.ZIP)):
         zpath = args.ZIP[i]
@@ -134,9 +93,9 @@ def main__():
                         w = 40
 
                     subelements = \
-                        [f"[ 🪧 Symbol    ] {x:<{w}} {skipped if x in symbols else ""}" for x in new_symbols.keys()] + \
-                        [f"[ 👣 Footprint ] {x:<{w}} {skipped if x in fprints else ""}" for x in new_fprints.keys()] + \
-                        [f"[ 📦 3D Model  ] {x:<{w}} {skipped if x in models else ""}" for x in new_models.keys()]
+                        [f'[ 🪧 Symbol    ] {x:<{w}} {skipped if x in symbols else ""}' for x in new_symbols.keys()] + \
+                        [f'[ 👣 Footprint ] {x:<{w}} {skipped if x in fprints else ""}' for x in new_fprints.keys()] + \
+                        [f'[ 📦 3D Model  ] {x:<{w}} {skipped if x in models else ""}' for x in new_models.keys()]
 
                     for j in range(0, len(subelements)):
                         l3char = " ├──" if j < len(subelements) - 1 else " └──"

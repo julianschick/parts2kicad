@@ -1,7 +1,7 @@
 import os
 from argparse import Namespace
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Tuple
 
 from colorama import Fore
 
@@ -9,7 +9,7 @@ from parts2kicad import sexp
 from parts2kicad.term import clash_input, PRE, ClashHandling, PRE2
 
 
-def process_fprints(args: Namespace, target: Path, fprints: dict[tuple[str, str], bytes], paths_to_models: dict[str, dict[str, Path]]):
+def process_fprints(args: Namespace, target: Path, fprints: Dict[Tuple[str, str], bytes], paths_to_models: Dict[str, Dict[str, Path]]):
     target_fprints = target.with_suffix(".pretty")
     if not os.path.exists(target_fprints):
         os.mkdir(target_fprints)
@@ -30,7 +30,9 @@ def process_fprints(args: Namespace, target: Path, fprints: dict[tuple[str, str]
                         path3d = paths_to_models[zip_hash][name]
 
             if path3d:
-                rel_path3d = path3d.relative_to(target_fprints, walk_up=True)
+                rel_path3d = Path(os.path.relpath(path3d, target))
+                # later for py 3.12:
+                # rel_path3d = path3d.relative_to(target, walk_up=True)
 
                 s = sexp.read_from_string(data.decode('utf8'))
                 if not s[0].is_list() or not s[0][0].is_token_lower('module'):

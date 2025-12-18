@@ -1,7 +1,8 @@
 import os
+import typing
 from argparse import Namespace
 from pathlib import Path
-from typing import Final, Optional
+from typing import Final, Optional, Tuple, Dict, Set
 
 from colorama import Fore
 
@@ -21,7 +22,7 @@ def is_symbol(node: Node, sname: Optional[str] = None) -> bool:
         and (sname is None or str(node[1]) == sname)
 
 
-def process_symbols(args: Namespace, target: Path, symbols: dict[tuple[str, str], bytes]):
+def process_symbols(args: Namespace, target: Path, symbols: Dict[Tuple[str, str], bytes]):
     print("\n 🪧 Symbols ...")
     if not symbols:
         print(f"{PRE}No symbols to process.")
@@ -36,14 +37,14 @@ def process_symbols(args: Namespace, target: Path, symbols: dict[tuple[str, str]
             err(f"{PRE}Target does not seem to be a well-formed KiCad symbol library.")
             exit(1)
 
-        syms_in_lib: set[str] = {str(s[1]) for s in lib[0].subnodes if is_symbol(s)}
+        syms_in_lib: Set[str] = {str(s[1]) for s in lib[0].subnodes if is_symbol(s)}
 
         for (sym_ziphash, sym_fname), sym_data in symbols.items():
             d = sexp.read_from_string(sym_data.decode('utf8'))
             if not d[0].is_list() or not d[0][0].is_token_lower('kicad_symbol_lib'):
                 raise Exception("Input is not a KiCad Symbol Library.")
 
-            syms_to_add: list[tuple[Optional[Whitespace], Node, Optional[Whitespace]]] = []
+            syms_to_add: typing.List[Tuple[Optional[Whitespace], Node, Optional[Whitespace]]] = []
 
             for i in range(0, len(d[0].subnodes)):
                 s = d[0].subnodes[i]

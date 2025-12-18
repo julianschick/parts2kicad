@@ -2,13 +2,14 @@ import os.path
 import shutil
 from argparse import Namespace
 from pathlib import Path
+from typing import Dict, Tuple
 
 from colorama import Fore
 
 from parts2kicad.term import PRE, clash_input, ClashHandling, PRE2
 
 
-def process_3dmodels(args: Namespace, target: Path, models: dict[tuple[str, str], bytes]) -> dict[str, dict[str, Path]]:
+def process_3dmodels(args: Namespace, target: Path, models: Dict[Tuple[str, str], bytes]) -> Dict[str, Dict[str, Path]]:
     target_models = target.with_suffix(".3dshapes")
     if not os.path.exists(target_models):
         os.mkdir(target_models)
