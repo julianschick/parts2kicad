@@ -2,29 +2,12 @@
 
 Extracts KiCad symbols, footprints and 3D models from SamacSys partlib zip files as you download them for instance via Mouser or Farnell.
 
-This is done as follows:
-```mermaid
-flowchart LR
+If you have a zip file containing the component _X123_ this is achieved as follows.
 
-X123.kicad_sym["`X123.kicad_symbol
-_KiCad Schematic Symbol_`"]
+* `X123.kicad_sym` (schematic symbol) → gets added to `mylibrary.kicad_sym`
+* `X123.kicad_mod` (pcb footprint) → gets copied to `mylibrary.pretty/X123.kicad_mod`
+* `X123.stp` (3D model) → gets copied to `mylibrary.3dshapes/X123.stp`
 
-X123.kicad_mod["`X123.kicad_mod
-_KiCad Footprint_`"]
-
-X123.stp["`X123.stp
-_3D Model_`"]
-
-symfile["`Gets added to _mylibrary.kicad_sym_`"]
-fprintfile["`Gets copied to _mylibrary.pretty/X123.kicad_mod_`"]
-d3file["`Gets copied to _mylibrary.3dshapes/X123.stp_`"]
-
-Zip["Zip Archive"]
-
-Zip --> X123.kicad_sym --> symfile
-Zip --> X123.kicad_mod --> fprintfile
-Zip --> X123.stp --> d3file
-```
 So that you can keep all your downloaded stuff together at one place and do not have to fiddle inside the symbol libraries by yourself. 
 The path to the 3D model in the footprint file is set to a relative path of the form `../mylibrary.3dshapes/X123.stp`. 
 Thus, you can move your lib freely around your hard drive. Only if you rename it, the links from footprint to 3D model break.
@@ -45,11 +28,6 @@ You can also glob over a bunch of zip archives:
 ```bash
 $ p2k ~/downloads/*.zip -t mylibrary.kicad_sym
 ```
-
-## Screenshots
-
-![Example Command](images/example.png)
-![Help Message](images/help.png)
 
 ## Project Pages
 
